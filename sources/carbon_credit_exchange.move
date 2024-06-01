@@ -28,7 +28,7 @@ module carbon_credit_exchange::carbon_credit_exchange {
         id: UID, // Unique identifier for the listing
         credit_id: ID, // ID of the carbon credit being listed
         owner: address, // Owner of the listing
-        base_price: u64, // Fixed base_price for the carbon credit
+        base_price: u64, // Fixed base price for the carbon credit
         active: bool, // Status of the listing
     }
 
@@ -51,8 +51,8 @@ module carbon_credit_exchange::carbon_credit_exchange {
 
     // Functions for managing the carbon credit trading platform
 
-    // initialize the contract
-    fun init(
+    // Initialize the contract
+    public fun init(
         ctx: &mut TxContext
     ) {
         // Create a new contract object
@@ -64,7 +64,7 @@ module carbon_credit_exchange::carbon_credit_exchange {
         };
 
         let contract_address = tx_context::sender(ctx);
-        
+
         // Transfer the contract object to the contract owner
         transfer::transfer(contract, contract_address);
     }
@@ -104,24 +104,23 @@ module carbon_credit_exchange::carbon_credit_exchange {
             active: true, // Set the listing as active
         };
 
-        // add the listing to the contract
+        // Add the listing to the contract
         vector::push_back(&mut contract.listings, listing);
     }
 
-    // delete listing
+    // Function to deactivate a listing
     public fun deactivate_listing(
         listing: &mut Listing,
         ctx: &mut TxContext
     ) {
-        // check if the caller is the owner of the listing
+        // Ensure the caller is the owner of the listing
         assert!(listing.owner == tx_context::sender(ctx), ENotOwner);
 
-        // mark the listing as inactive
+        // Mark the listing as inactive
         listing.active = false;
-        
     }
 
-    // function to get all listings
+    // Function to get all listings
     public fun get_listings(
         contract: &Contract,
     ) : vector<ID> {
@@ -136,7 +135,7 @@ module carbon_credit_exchange::carbon_credit_exchange {
             let listing = &contract.listings[i];
             let id = object::uid_to_inner(&listing.id);
 
-            listings.push_back(id);
+            vector::push_back(&mut listings, id);
 
             i = i + 1;
         };
@@ -156,7 +155,7 @@ module carbon_credit_exchange::carbon_credit_exchange {
 
         let amount_u64 = coin::value(&amount);
 
-        // Ensure the bid amount is greater than base bid amount
+        // Ensure the bid amount is greater than or equal to the base price
         assert!(amount_u64 >= listing.base_price, EInsufficientBid);
 
         let id = object::new(ctx); // Generate a new unique ID
@@ -168,12 +167,12 @@ module carbon_credit_exchange::carbon_credit_exchange {
             is_claimed: false,
         };
 
-        // transfer the bid amount to the escrow
+        // Transfer the bid amount to the escrow
         let bid_amount = coin::into_balance(amount);
         balance::join(&mut contract.escrow, bid_amount);
 
-        // add the bid to the contract
-        contract.bids.push_back(bid);
+        // Add the bid to the contract
+        vector::push_back(&mut contract.bids, bid);
     }
 
     // Function to accept a bid and transfer ownership of the carbon credit
@@ -205,7 +204,7 @@ module carbon_credit_exchange::carbon_credit_exchange {
         bid.is_claimed = true;
     }
 
-    // withdraw bid
+    // Function to withdraw a bid
     public fun withdraw_bid(
         contract: &mut Contract,
         bid: &mut Bid,
@@ -214,10 +213,10 @@ module carbon_credit_exchange::carbon_credit_exchange {
         // Ensure the caller is the bidder
         assert!(bid.bidder == tx_context::sender(ctx), ENotOwner);
 
-        // check if the bid is claimed
+        // Ensure the bid is not already claimed
         assert!(!bid.is_claimed, EClaimedBid);
 
-        // mark the bid as claimed
+        // Mark the bid as claimed
         bid.is_claimed = true;
 
         // Transfer the bid amount back to the bidder
